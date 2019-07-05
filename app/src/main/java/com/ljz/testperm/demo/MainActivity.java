@@ -10,6 +10,7 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.provider.Settings;
@@ -18,13 +19,10 @@ import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.Toast;
 
-import com.ljz.testperm.demo.R;
 import com.ljz.testperm.demo.util.SystemUtil;
 
 import java.io.File;
@@ -32,12 +30,15 @@ import java.util.Vector;
 
 public class MainActivity extends AppCompatActivity {
 
-    public static String BRAND_XIAOMI = "Xiaomi";
-    public static String BRAND_ONEPLUS = "OnePlus";
-    public static String BRAND_MEIZU = "Meizu";
-    static final int REQUESTE = 1;//申请权限的请求码
-    public static final int MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE = 123;
-    public static String TAG = "MainActivity";
+    public static final String TAG = "MainActivity";
+    public static final String BRAND_XIAOMI = "Xiaomi";
+    public static final String BRAND_ONEPLUS = "OnePlus";
+    public static final String BRAND_MEIZU = "Meizu";
+    public static final String BRAND_HONOR = "HONOR";
+    public static final String BRAND_HUAWEI = "HUAWEI";
+    //申请权限的请求码
+    static final int REQUESTE = 1;
+
     private Button mBtn;
     private Button mGetAudioBtn;
     private Button mGotoStorePath;
@@ -49,7 +50,6 @@ public class MainActivity extends AppCompatActivity {
         mBtn = findViewById(R.id.goto_show);
         mGetAudioBtn = findViewById(R.id.get_audio_info_btn);
         mGotoStorePath = findViewById(R.id.goto_store_path);
-//        checkPermissionStore(MainActivity.this);
         verifyStoragePermissions();
         mBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -150,23 +150,23 @@ public class MainActivity extends AppCompatActivity {
         String brand = SystemUtil.getDeviceBrand();
         Log.w(TAG, "------------brand = " + brand);
         switch (brand) {
-            case "Xiaomi":
+            case BRAND_XIAOMI:
                 child = new File(parent, "MIUI/sound_recorder");
                 break;
-            case "OnePlus":
+            case BRAND_ONEPLUS:
                 break;
-            case "Meizu":
+            case BRAND_MEIZU:
                 break;
-            case "HONOR":
-            case "HUAWEI":
+            case BRAND_HONOR:
+            case BRAND_HUAWEI:
                 child = new File(parent, "Sounds");
-                parent.getPath();
-                Log.d(TAG, "华为sdcard getPath: " + parent.getPath());
                 break;
         }
         if (child != null) {
+            Log.d(TAG, "audio recorder files path is : " + child.getPath());
             return child.getPath();
         } else {
+            Log.d(TAG, "未覆盖到的机型！");
             return "";
         }
 
@@ -234,58 +234,6 @@ public class MainActivity extends AppCompatActivity {
         }
         cursor.close();
     }
-
-
-    public boolean checkPermissionStore(Context context) {
-        int currentAPIVersion = Build.VERSION.SDK_INT;
-        if (currentAPIVersion >= android.os.Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
-                if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.READ_EXTERNAL_STORAGE)) {
-                    showDialog("External storage", context, Manifest.permission.READ_EXTERNAL_STORAGE);
-
-                } else {
-                    ActivityCompat.requestPermissions((Activity) context, new String[]{Manifest.permission.READ_EXTERNAL_STORAGE}, MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
-                }
-                return false;
-            } else {
-                return true;
-            }
-
-        } else {
-            return true;
-        }
-    }
-
-    public void showDialog(final String msg, final Context context, final String permission) {
-        AlertDialog.Builder alertBuilder = new AlertDialog.Builder(context);
-        alertBuilder.setCancelable(true);
-        alertBuilder.setTitle("Permission necessary");
-        alertBuilder.setMessage(msg + " permission is necessary");
-        alertBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                ActivityCompat.requestPermissions((Activity) context, new String[]{permission}, MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE);
-            }
-        });
-        AlertDialog alert = alertBuilder.create();
-        alert.show();
-    }
-
-//    @Override
-//    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-//        switch (requestCode) {
-//            case MY_PERMISSIONS_REQUEST_READ_EXTERNAL_STORAGE:
-//                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-//                    getExternalAudioInfo();
-//                    geInternalAudioInfo();
-//                } else {
-//                    Toast.makeText(MainActivity.this, "GET_ACCOUNTS Denied", Toast.LENGTH_SHORT).show();
-//                }
-//                break;
-//            default:
-//                super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-//        }
-//    }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
