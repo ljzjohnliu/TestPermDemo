@@ -1,1 +1,3 @@
 # TestPermDemo
+
+验证SD权限以及跳转到系统文件管理器的小Demo

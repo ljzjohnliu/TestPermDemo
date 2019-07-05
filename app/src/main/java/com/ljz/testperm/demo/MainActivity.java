@@ -1,15 +1,12 @@
 package com.ljz.testperm.demo;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -17,12 +14,12 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 
+import com.ljz.testperm.demo.util.FileChooseUtil;
 import com.ljz.testperm.demo.util.SystemUtil;
 
 import java.io.File;
@@ -38,51 +35,66 @@ public class MainActivity extends AppCompatActivity {
     public static final String BRAND_HUAWEI = "HUAWEI";
     //申请权限的请求码
     static final int REQUESTE = 1;
+    // 表单的结果回调
+    private final static int FILECHOOSER_RESULTCODE = 1;
 
-    private Button mBtn;
-    private Button mGetAudioBtn;
-    private Button mGotoStorePath;
+    private Button mGetMediaAudioBtn;
+    private Button mGetRecorderAudioBtn;
+    private Button mGotoFileManager;
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (resultCode == RESULT_OK) {
+            switch (requestCode) {
+                case FILECHOOSER_RESULTCODE:
+                    Uri uri = data.getData();
+                    String chooseFilePath = FileChooseUtil.getInstance(this).getChooseFileResultPath(uri);
+                    Log.d(TAG, "选择文件返回：" + chooseFilePath);
+//                    sendFileMessage(chooseFilePath);
+                    break;
+            }
+        }
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mBtn = findViewById(R.id.goto_show);
-        mGetAudioBtn = findViewById(R.id.get_audio_info_btn);
-        mGotoStorePath = findViewById(R.id.goto_store_path);
+        mGetMediaAudioBtn = findViewById(R.id.get_media_audio);
+        mGetRecorderAudioBtn = findViewById(R.id.get_record_audio);
+        mGotoFileManager = findViewById(R.id.jump_to_filemanager);
         verifyStoragePermissions();
-        mBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-//                Intent intent = new Intent(MainActivity.this, ShowActivity.class);
-//                startActivity(intent);
-            }
-        });
-        mGetAudioBtn.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-//                if (checkPermissionStore(MainActivity.this)) {
-//                    getExternalAudioInfo();
-//                    geInternalAudioInfo();
-//                }
-                String path = getPath();
-                android.util.Log.d(TAG, "onClick: path = " + path);
-                getFileName(path);
 
+        mGetMediaAudioBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                getExternalAudioInfo();
+                geInternalAudioInfo();
             }
         });
-        mGotoStorePath.setOnClickListener(new View.OnClickListener() {
+        mGetRecorderAudioBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                String path = getPath();
+                Log.d(TAG, "onClick: path = " + path);
+                getFileName(path);
+            }
+        });
+        mGotoFileManager.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("*/*");
                 intent.addCategory(Intent.CATEGORY_OPENABLE);
-                startActivityForResult(intent, 1);
+
+                intent.setType("*/*");
+//                intent.setType("audio/*");
+//                intent.setType("video/*");
+//                intent.setType("image/*");
+
+                startActivityForResult(intent, FILECHOOSER_RESULTCODE);
             }
         });
-        String path = getPath();
-        Log.d(TAG, "onCreate: path   " + path);
-
     }
 
     @Override
@@ -90,39 +102,37 @@ public class MainActivity extends AppCompatActivity {
         switch (requestCode) {
             case REQUESTE:
 
-                if (grantResults.length > 0
-                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     Log.d(TAG, "onRequestPermissionsResult: 已经有了存储权限");
                 } else {
                     new AlertDialog.Builder(this).
-                            setMessage("为了更好的使用爱奇艺小游戏，请准予我们使用这些权限。\n" + "请在“设置->应用->爱奇艺小游戏->权限”中开启这些权限。" )
+                            setMessage("为了更好的使用该应用，请准予我们使用这些权限。\n" + "请在“设置->应用->TestPermDemo->权限”中开启这些权限。")
                             .setTitle("请允许存储和手机权限")
                             .setPositiveButton("去设置", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    verifyStoragePermissions();
-                                    for (int i = 0; i < grantResults.length; i++) {
-                                        if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
-                                            if (!ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, permissions[i])) {
-                                                Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                                Uri uri = Uri.fromParts("package", getPackageName(), null);
-                                                intent.setData(uri);
-                                                startActivityForResult(intent, REQUESTE);
-                                                dialog.dismiss();
-                                                return;
-                                            }
-                                        }
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            verifyStoragePermissions();
+                            for (int i = 0; i < grantResults.length; i++) {
+                                if (grantResults[i] == PackageManager.PERMISSION_DENIED) {
+                                    if (!ActivityCompat.shouldShowRequestPermissionRationale(MainActivity.this, permissions[i])) {
+                                        Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                        Uri uri = Uri.fromParts("package", getPackageName(), null);
+                                        intent.setData(uri);
+                                        startActivityForResult(intent, REQUESTE);
+                                        dialog.dismiss();
+                                        return;
                                     }
                                 }
-                            })
-                            .setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialog, int which) {
-                                    dialog.dismiss();
-                                    finish();
-                                    System.exit(0);
-                                }
-                            }).create().show();
+                            }
+                        }
+                    }).setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                            finish();
+                            System.exit(0);
+                        }
+                    }).create().show();
                 }
                 break;
         }
@@ -130,13 +140,10 @@ public class MainActivity extends AppCompatActivity {
 
     public void verifyStoragePermissions() {
         // Check if we have write permission
-        int permission = ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.WRITE_EXTERNAL_STORAGE);
-        int permission_read_phone_state = ActivityCompat.checkSelfPermission(this,
-                Manifest.permission.READ_PHONE_STATE);
+        int permission = ActivityCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        int permission_read_phone_state = ActivityCompat.checkSelfPermission(this, Manifest.permission.READ_PHONE_STATE);
 
-        if (permission != PackageManager.PERMISSION_GRANTED
-                || permission_read_phone_state != PackageManager.PERMISSION_GRANTED) {
+        if (permission != PackageManager.PERMISSION_GRANTED || permission_read_phone_state != PackageManager.PERMISSION_GRANTED) {
             // We don't have permission so prompt the user
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE, Manifest.permission.READ_PHONE_STATE}, REQUESTE);
         } else {
@@ -233,10 +240,5 @@ public class MainActivity extends AppCompatActivity {
             cursor.moveToNext();
         }
         cursor.close();
-    }
-
-    @Override
-    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
     }
 }

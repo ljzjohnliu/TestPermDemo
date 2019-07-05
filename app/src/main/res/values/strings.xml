@@ -1,3 +1,8 @@
 <resources>
     <string name="app_name">TestPermDemo</string>
+
+    <string name="txt_get_media_audio">读取媒体数据库中音频</string>
+    <string name="txt_get_audiorecord">读取录音机的录音文件</string>
+    <string name="txt_jump_filemanager">跳转到系统文件管理器</string>
+
 </resources>
